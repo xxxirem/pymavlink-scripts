@@ -1,7 +1,7 @@
 import time
 from pymavlink import mavutil
 
-connection_string = 'udpin:127.0.0.1:14550'
+connection_string = 'udpin:127.0.0.1:14551'
 print(f"Connecting to vehicle on: {connection_string}")
 master = mavutil.mavlink_connection(connection_string)
 
