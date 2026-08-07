@@ -5,9 +5,9 @@ from pymavlink import mavutil
 CONNECTION_STRING = "udpin:127.0.0.1:14551" # SITL
 # CONNECTION_STRING = "tcp:127.0.0.1:5602" # Pi
 
-TARGET_ALTITUDE = 0.5  # Высота первого взлета (метры)
-MAX_CLIMB_RATE = 1.0  # Макс. скорость подъема (м/с)
-MOVE_SPEED = 0.5  # Ограничение скорости (м/с)
+TARGET_ALTITUDE = 3.0  # Высота первого взлета (метры)
+MAX_CLIMB_RATE = 1.5 # Макс. скорость подъема (м/с)
+MOVE_SPEED = 0.9  # Ограничение скорости (м/с)
 
 print(f"[INIT] Подключение к полетному контроллеру: {CONNECTION_STRING}")
 master = mavutil.mavlink_connection(CONNECTION_STRING)
