@@ -240,7 +240,7 @@ def safe_takeoff_with_ack(target_alt=1.0):
     else:
         print(" [TAKEOFF ERROR] Таймаут! ArduPilot не прислал ACK.")
         print_statustext()
-        return False
+        # return False
 
     print("[MONITOR] Контроль скорости подъема...")
     start_time = time.time()
