@@ -2,16 +2,16 @@ import sys
 import time
 from pymavlink import mavutil
 
+
 CONNECTION_STRING = "udpin:127.0.0.1:14551" # SITL
 # CONNECTION_STRING = "tcp:127.0.0.1:5602" # Pi
 
-TARGET_ALTITUDE = 3.0  # Высота первого взлета (метры)
+TARGET_ALTITUDE = 1.5  # Высота первого взлета (метры)
 MAX_CLIMB_RATE = 1.5 # Макс. скорость подъема (м/с)
 MOVE_SPEED = 0.9  # Ограничение скорости (м/с)
 
 print(f"[INIT] Подключение к полетному контроллеру: {CONNECTION_STRING}")
 master = mavutil.mavlink_connection(CONNECTION_STRING)
-
 
 
 # 1. Ждем НАСТОЯЩИЙ Heartbeat от автопилота (пропускаем System ID = 0)
@@ -91,11 +91,11 @@ def set_home_position():
     master.mav.command_long_send(
         get_target_sys(),
         get_target_comp(),
-        mavutil.mavlink.MAV_CMD_DO_SET_HOME,
+        mavutil.mavlink.MAV_CMD_DO_SET_HOME, # todo: replace with MAV_CMD_DO_SET_GLOBAL_ORIGIN (611)
         0,
         1,  # 1 = использовать текущую позицию
-        0,
-        0,
+        0.01,
+        0.01,
         0,
         0,
         0,
@@ -145,7 +145,7 @@ def set_horizontal_speed(speed_mps):
         0,
         0,
         0,
-        0,  # Зарезервировано
+        0,
     )
 
 
