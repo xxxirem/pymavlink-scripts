@@ -1,5 +1,6 @@
 import time
 from pymavlink import mavutil
+from fly_to_my import set_ahrs_origin, takeoff, land
 
 # CONNECTION_STRING = "udpin:127.0.0.1:14551"
 CONNECTION_STRING = "tcp:127.0.0.1:5602"
@@ -26,24 +27,6 @@ def check_connection(master_instance, timeout=5):
 
 def print_status(master_instance):
     print(master_instance.wait_heartbeat())
-
-
-def set_ahrs_origin(master_instance):
-    master_instance.mav.command_long_send(
-        master_instance.target_system,
-        master_instance.target_component,
-        mavutil.mavlink.MAV_CMD_DO_SET_HOME,
-        0,
-        1,
-        0.01,
-        0.01,
-        0,
-        0,
-        0,
-        0,
-    )
-    print("[AHRS Origin] Command COMMAND_INT (MAV_CMD_DO_SET_GLOBAL_ORIGIN) send.")
-    recv_ack(master_instance, mavutil.mavlink.MAV_CMD_DO_SET_HOME)
 
 
 def recv_ack(master_instance, command, timeout=3):
@@ -128,111 +111,6 @@ def disarm(master_instance):
         master_instance.wait_heartbeat(timeout=1)
 
 
-def takeoff(master_instance, target_alt=1.5):
-    master_instance.mav.command_long_send(
-        master_instance.target_system,
-        master_instance.target_component,
-        mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        target_alt,
-    )
-    print(f"[Takeoff] Command (MAV_CMD_NAV_TAKEOFF) send. Target Alt = {target_alt}")
-    recv_ack(master_instance, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF)
-
-    while True:
-        msg = master_instance.recv_match(
-            type="LOCAL_POSITION_NED", blocking=True, timeout=1
-        )
-
-        if msg is None:
-            print("[Takeoff] Waiting for LOCAL_POSITION_NED message...")
-            continue
-
-        current_alt = -msg.z
-
-        print(
-            f"Pos: [{msg.x:7.2f}, {msg.y:7.2f}, {msg.z:7.2f}] m | "
-            f"Vel: [{msg.vx:6.2f}, {msg.vy:6.2f}, {msg.vz:6.2f}] m/s"
-        )
-
-        if abs(current_alt - target_alt) <= EPSILON:
-            print(f"[Takeoff] Target altitude reached: {current_alt:.2f} m")
-            break
-    return True
-
-
-def move_relative(master_instance, dx, dy, dz):
-    """Задает положение по относительным координатам, положительное значение dz - вниз"""
-    type_mask = 0b0000101111000000
-    init_x, init_y, init_z = None, None, None
-    print("[Move Relative] Getting initial position...")
-    while True:
-        msg = master_instance.recv_match(
-            type="LOCAL_POSITION_NED", blocking=True, timeout=1
-        )
-
-        if msg is None:
-            print("[Move Relative] Waiting for LOCAL_POSITION_NED message...")
-            continue
-
-        init_x, init_y, init_z = msg.x, msg.y, msg.z
-        print(
-            f"[Move Relative] Init position (XYZ): [{init_x:8.3f}, {init_y:8.3f}, {init_z:8.3f}] m"
-        )
-        break
-    tar_x, tar_y, tar_z = init_x + dx, init_y + dy, init_z + dz
-
-    print("[Move Relative] Command SET_POSITION_TARGET_LOCAL_NED send.")
-    master_instance.mav.set_position_target_local_ned_send(
-        0,
-        master_instance.target_system,
-        master_instance.target_component,
-        mavutil.mavlink.MAV_FRAME_BODY_OFFSET_NED,
-        type_mask,
-        dx,
-        dy,
-        dz,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-    )
-
-    while True:
-        msg = master_instance.recv_match(
-            type="LOCAL_POSITION_NED", blocking=True, timeout=1
-        )
-
-        if msg is None:
-            print("[Move Relative] Waiting for LOCAL_POSITION_NED message...")
-            continue
-
-        print(
-            f"Pos: [{msg.x:7.2f}, {msg.y:7.2f}, {msg.z:7.2f}] m | "
-            f"Vel: [{msg.vx:6.2f}, {msg.vy:6.2f}, {msg.vz:6.2f}] m/s"
-        )
-
-        if (
-            abs(tar_x - msg.x) <= EPSILON
-            and abs(tar_y - msg.y) <= EPSILON
-            and abs(tar_z - msg.z) <= EPSILON
-        ):
-            print(
-                f"[Move Relative] Target position reached: {msg.x:8.3f}, {msg.y:8.3f}, {msg.z:8.3f} m"
-            )
-            break
-    return True
-
 def print_loc_pos(master_instance, duration=5.0):
     start_time = time.time()
     while time.time() - start_time < duration:
@@ -250,52 +128,24 @@ def print_loc_pos(master_instance, duration=5.0):
         )
 
 
-def land(master_instance):
-    print("[Land] Command SET_MODE (LAND) send.")
-    set_mode(master_instance, "LAND")
-    while master_instance.motors_armed():
-        master_instance.wait_heartbeat(timeout=1)
-
-
 def main():
     master = mavutil.mavlink_connection(CONNECTION_STRING)
 
     if not check_connection(master):
         return 1
 
-    master.mav.command_long_send(
-            master.target_system,
-            master.target_component,
-            mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
-            0,
-            32,
-            1000000,
-            0,
-            0,
-            0,
-            0,
-            0,
-        )
     print_status(master)
     print("Before ahrs origin (MAV_CMD_DO_SET_HOME) set.\nLocal position NED:")
-    print_loc_pos(master)
+    print_loc_pos(master, 3)
+
 
     print("After ahrs origin (MAV_CMD_DO_SET_HOME) set.\nLocal position NED:")
-    # set_mode(master, "GUIDED")
     set_ahrs_origin(master)
-    master.mav.command_long_send(
-                master.target_system,
-                master.target_component,
-                mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
-                0,
-                32,
-                -1,
-                0,
-                0,
-                0,
-                0,
-                0,
-            )
+    set_mode(master, "GUIDED")
+    print_loc_pos(master, 3)
+    # arm(master)
+    # takeoff(master)
+    # land(master)
 
 if __name__ == "__main__":
     main()
