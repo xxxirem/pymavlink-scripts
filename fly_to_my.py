@@ -2,6 +2,7 @@ import time
 from pymavlink import mavutil
 
 CONNECTION_STRING = "udpin:127.0.0.1:14551"
+# CONNECTION_STRING = "tcp:127.0.0.1:5602"
 MAV_CMD_DO_SET_GLOBAL_ORIGIN = 611
 EPSILON = 0.15
 
