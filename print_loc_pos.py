@@ -263,6 +263,19 @@ def main():
     if not check_connection(master):
         return 1
 
+    master.mav.command_long_send(
+            master.target_system,
+            master.target_component,
+            mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
+            0,
+            32,
+            1000000,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
     print_status(master)
     print("Before ahrs origin (MAV_CMD_DO_SET_HOME) set.\nLocal position NED:")
     print_loc_pos(master)
@@ -270,7 +283,19 @@ def main():
     print("After ahrs origin (MAV_CMD_DO_SET_HOME) set.\nLocal position NED:")
     # set_mode(master, "GUIDED")
     set_ahrs_origin(master)
-
+    master.mav.command_long_send(
+                master.target_system,
+                master.target_component,
+                mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
+                0,
+                32,
+                -1,
+                0,
+                0,
+                0,
+                0,
+                0,
+            )
 
 if __name__ == "__main__":
     main()
