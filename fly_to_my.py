@@ -3,6 +3,7 @@ from pymavlink import mavutil
 
 CONNECTION_STRING = "udpin:127.0.0.1:14551"
 MAV_CMD_DO_SET_GLOBAL_ORIGIN = 611
+EPSILON = 0.15
 
 
 def check_connection(master_instance, timeout=5):
@@ -140,41 +141,96 @@ def takeoff(master_instance, target_alt=1.5):
         0,
         target_alt,
     )
-    print("[Takeoff] Command COMMAND_LONG (MAV_CMD_NAV_TAKEOFF) send.")
+    print(f"[Takeoff] Command (MAV_CMD_NAV_TAKEOFF) send. Target Alt = {target_alt}")
     recv_ack(master_instance, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF)
+
     while True:
-        msg = master_instance.recv_match(type="LOCAL_POSITION_NED", blocking=True, timeout=1)
-        if msg:
-            current_alt = -msg.z
-            if current_alt >= (target_alt - 0.15):
-                time.sleep(1)
-                break
-
-
-def move_relative(master_instance, dx, dy, dz, duration=4):
-    type_mask = 0b0000101111000000
-    print("[Move Relative] Command SET_POSITION_TARGET_LOCAL_NED send.")
-    start_time = time.time()
-    while time.time() - start_time < duration:
-        master_instance.mav.set_position_target_local_ned_send(
-            0,
-            master_instance.target_system,
-            master_instance.target_component,
-            mavutil.mavlink.MAV_FRAME_BODY_OFFSET_NED,
-            type_mask,
-            dx,
-            dy,
-            dz,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
+        msg = master_instance.recv_match(
+            type="LOCAL_POSITION_NED", blocking=True, timeout=1
         )
-        time.sleep(0.2)
+
+        if msg is None:
+            print("[Takeoff] Waiting for LOCAL_POSITION_NED message...")
+            continue
+
+        current_alt = -msg.z
+
+        print(
+            f"Pos: [{msg.x:7.2f}, {msg.y:7.2f}, {msg.z:7.2f}] m | "
+            f"Vel: [{msg.vx:6.2f}, {msg.vy:6.2f}, {msg.vz:6.2f}] m/s"
+        )
+
+        if abs(current_alt - target_alt) <= EPSILON:
+            print(f"[Takeoff] Target altitude reached: {current_alt:.2f} m")
+            break
+    return True
+
+
+def move_relative(master_instance, dx, dy, dz):
+    """Задает положение по относительным координатам, положительное значение dz - вниз"""
+    type_mask = 0b0000101111000000
+    init_x, init_y, init_z = None, None, None
+    print("[Move Relative] Getting initial position...")
+    while True:
+        msg = master_instance.recv_match(
+            type="LOCAL_POSITION_NED", blocking=True, timeout=1
+        )
+
+        if msg is None:
+            print("[Move Relative] Waiting for LOCAL_POSITION_NED message...")
+            continue
+
+        init_x, init_y, init_z = msg.x, msg.y, msg.z
+        print(
+            f"[Move Relative] Init position (XYZ): [{init_x:8.3f}, {init_y:8.3f}, {init_z:8.3f}] m"
+        )
+        break
+    tar_x, tar_y, tar_z = init_x + dx, init_y + dy, init_z + dz
+
+    print("[Move Relative] Command SET_POSITION_TARGET_LOCAL_NED send.")
+    master_instance.mav.set_position_target_local_ned_send(
+        0,
+        master_instance.target_system,
+        master_instance.target_component,
+        mavutil.mavlink.MAV_FRAME_BODY_OFFSET_NED,
+        type_mask,
+        dx,
+        dy,
+        dz,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    )
+
+    while True:
+        msg = master_instance.recv_match(
+            type="LOCAL_POSITION_NED", blocking=True, timeout=1
+        )
+
+        if msg is None:
+            print("[Move Relative] Waiting for LOCAL_POSITION_NED message...")
+            continue
+
+        print(
+            f"Pos: [{msg.x:7.2f}, {msg.y:7.2f}, {msg.z:7.2f}] m | "
+            f"Vel: [{msg.vx:6.2f}, {msg.vy:6.2f}, {msg.vz:6.2f}] m/s"
+        )
+
+        if (
+            abs(tar_x - msg.x) <= EPSILON
+            and abs(tar_y - msg.y) <= EPSILON
+            and abs(tar_z - msg.z) <= EPSILON
+        ):
+            print(
+                f"[Move Relative] Target position reached: {msg.x:8.3f}, {msg.y:8.3f}, {msg.z:8.3f} m"
+            )
+            break
+    return True
 
 
 def land(master_instance):
@@ -195,7 +251,11 @@ def main():
     set_mode(master, "GUIDED")
     arm(master)
     takeoff(master, 1.5)
-    move_relative(master, 2.0, 0.0, 0.0, 4)
+    move_relative(master, 3, 0, 0)
+    # move_relative(master, 0, 3, 0)
+    # move_relative(master, -3, 0, 0)
+    # move_relative(master, 0, -3, 0)
+    # move_relative(master, 3, 0, 0)
     land(master)
 
 
