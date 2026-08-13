@@ -42,7 +42,7 @@ def set_ahrs_origin(master_instance):
         0,
         0,
     )
-    print("[AHRS Origin] Command COMMAND_INT (MAV_CMD_DO_SET_GLOBAL_ORIGIN) send.")
+    print("[AHRS Origin] Command COMMAND_INT (MAV_CMD_DO_SET_HOME) send.")
     recv_ack(master_instance, mavutil.mavlink.MAV_CMD_DO_SET_HOME)
 
 
