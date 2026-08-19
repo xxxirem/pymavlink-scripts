@@ -1,8 +1,8 @@
 import time
 from pymavlink import mavutil
 
-CONNECTION_STRING = "udpin:127.0.0.1:14551"
-# CONNECTION_STRING = "tcp:127.0.0.1:5602"
+# CONNECTION_STRING = "udpin:127.0.0.1:14551"
+CONNECTION_STRING = "tcp:127.0.0.1:5602"
 MAV_CMD_DO_SET_GLOBAL_ORIGIN = 611
 EPSILON = 0.15
 
@@ -252,7 +252,7 @@ def main():
     set_mode(master, "GUIDED")
     arm(master)
     takeoff(master, 1.5)
-    move_relative(master, 3, 0, 0)
+    # move_relative(master, 3, 0, 0)
     # move_relative(master, 0, 3, 0)
     # move_relative(master, -3, 0, 0)
     # move_relative(master, 0, -3, 0)

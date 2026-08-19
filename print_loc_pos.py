@@ -140,7 +140,7 @@ def main():
 
 
     print("After ahrs origin (MAV_CMD_DO_SET_HOME) set.\nLocal position NED:")
-    set_ahrs_origin(master)
+    # set_ahrs_origin(master)
     set_mode(master, "GUIDED")
     print_loc_pos(master, 3)
     # arm(master)
