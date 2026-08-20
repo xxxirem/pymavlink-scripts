@@ -76,11 +76,13 @@ def set_global_origin(master_instance, lat, lon, alt):
     lat_int = int(lat * 1e7)
     lon_int = int(lon * 1e7)
 
-    master.mav.command_int_send(
-        master.target_system,
-        master.target_component,
+    MAV_CMD_DO_SET_GLOBAL_ORIGIN = 611
+
+    master_instance.mav.command_int_send(
+        master_instance.target_system,
+        master_instance.target_component,
         mavutil.mavlink.MAV_FRAME_GLOBAL,
-        mavutil.mavlink.MAV_CMD_DO_SET_GLOBAL_ORIGIN,  # 611
+        MAV_CMD_DO_SET_GLOBAL_ORIGIN,
         0,
         0,
         0,
@@ -89,21 +91,21 @@ def set_global_origin(master_instance, lat, lon, alt):
         0,
         lat_int,  # X: Latitude (int32, deg * 1e7)
         lon_int,  # Y: Longitude (int32, deg * 1e7)
-        ALT,  # Z: Altitude MSL (float, meters)
+        alt,  # Z: Altitude MSL (float, meters)
     )
     print(
-        f"[Set Global Origin] Command (MAV_CMD_DO_SET_GLOBAL_ORIGIN) send. LAT: {lat}, LON: {LON}, ALT: {ALT}"
+        f"[Set Global Origin] Command (MAV_CMD_DO_SET_GLOBAL_ORIGIN) send. LAT: {lat}, LON: {lon}, ALT: {alt}"
     )
-    recv_ack(master_instance, mavutil.mavlink.MAV_CMD_DO_SET_GLOBAL_ORIGIN)
+    recv_ack(master_instance, MAV_CMD_DO_SET_GLOBAL_ORIGIN)
 
 
 def print_global_origin(master_instance):
     """Prints Global (EKF) origin"""
     MSG_GPS_GLOBAL_ORIGIN = 49
 
-    master.mav.command_long_send(
-        master.target_system,
-        master.target_component,
+    master_instance.mav.command_long_send(
+        master_instance.target_system,
+        master_instance.target_component,
         mavutil.mavlink.MAV_CMD_REQUEST_MESSAGE,  # Command ID (512)
         0,  # Confirmation
         MSG_GPS_GLOBAL_ORIGIN,  # Param 1: ID запрашиваемого сообщения (49)
@@ -116,7 +118,7 @@ def print_global_origin(master_instance):
     )
     print("[Get Origin] MAV_CMD_REQUEST_MESSAGE (MSG_GPS_GLOBAL_ORIGIN) send.")
     recv_ack(master_instance, mavutil.mavlink.MAV_CMD_REQUEST_MESSAGE)
-    msg = master.recv_match(type="GPS_GLOBAL_ORIGIN", blocking=True, timeout=3)
+    msg = master_instance.recv_match(type="GPS_GLOBAL_ORIGIN", blocking=True, timeout=3)
 
     if msg:
         lat = msg.latitude / 1e7
@@ -297,3 +299,20 @@ def land(master_instance):
     set_mode(master_instance, "LAND")
     while master_instance.motors_armed():
         master_instance.wait_heartbeat(timeout=1)
+
+
+def print_loc_pos(master_instance, duration=5.0):
+    start_time = time.time()
+    while time.time() - start_time < duration:
+        msg = master_instance.recv_match(
+            type="LOCAL_POSITION_NED", blocking=True, timeout=1
+        )
+
+        if msg is None:
+            print("[LOC_POS_NED] Waiting for LOCAL_POSITION_NED message...")
+            continue
+
+        print(
+            f"Pos: [{msg.x:7.2f}, {msg.y:7.2f}, {msg.z:7.2f}] m | "
+            f"Vel: [{msg.vx:6.2f}, {msg.vy:6.2f}, {msg.vz:6.2f}] m/s"
+        )
