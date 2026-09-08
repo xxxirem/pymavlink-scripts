@@ -1,3 +1,5 @@
+# Old version of arm script. New one in guided_functions.py
+
 import time
 from pymavlink import mavutil
 

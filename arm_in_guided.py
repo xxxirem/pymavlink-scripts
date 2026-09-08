@@ -16,14 +16,11 @@ def main():
         return 1
 
     gf.print_status(master)
-
     # set_home(master)
     gf.set_global_origin(master, LAT, LON, ALT)
     gf.set_mode(master, "GUIDED")
     gf.arm(master)
-    gf.takeoff(master, 1.5)
     time.sleep(3)
-    gf.land(master)
     gf.disarm(master)
 
 if __name__ == "__main__":

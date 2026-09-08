@@ -228,7 +228,7 @@ def takeoff(master_instance, target_alt=1.5):
 
 
 def move_relative(master_instance, dx, dy, dz):
-    """Задает положение по относительным координатам, положительное значение dz - вниз"""
+    """Задает положение по относительным координатам, положительное значение dx - вперед, dy - вправо, dz - вниз"""
     type_mask = 0b0000101111000000
     init_x, init_y, init_z = None, None, None
     print("[Move Relative] Getting initial position...")

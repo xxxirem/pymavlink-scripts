@@ -18,7 +18,7 @@ def main():
 
     gf.set_global_origin(master, LAT, LON, ALT)
     # set_home(master)
-    gf.print_global_origin
+    gf.print_global_origin(master)
     gf.set_mode(master, "GUIDED")
     gf.arm(master)
     gf.takeoff(master, 1.5)
