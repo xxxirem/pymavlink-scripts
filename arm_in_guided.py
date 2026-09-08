@@ -20,7 +20,7 @@ def main():
     gf.set_global_origin(master, LAT, LON, ALT)
     gf.set_mode(master, "GUIDED")
     gf.arm(master)
-    time.sleep(3)
+    time.sleep(8)
     gf.disarm(master)
 
 if __name__ == "__main__":
