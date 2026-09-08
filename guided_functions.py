@@ -1,7 +1,7 @@
 import time
 from pymavlink import mavutil
 
-EPSILON = 0.15
+EPSILON = 0.25
 
 
 def check_connection(master_instance, timeout=5):
