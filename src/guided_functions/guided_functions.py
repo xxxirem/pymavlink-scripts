@@ -1,7 +1,7 @@
 import time
 from pymavlink import mavutil
 
-EPSILON = 0.25
+EPSILON = 0.15
 
 
 def check_connection(master_instance, timeout=5):
@@ -188,7 +188,7 @@ def disarm(master_instance):
         master_instance.wait_heartbeat(timeout=1)
 
 
-def takeoff(master_instance, target_alt=1.5):
+def takeoff(master_instance, target_alt=1.0):
     master_instance.mav.command_long_send(
         master_instance.target_system,
         master_instance.target_component,

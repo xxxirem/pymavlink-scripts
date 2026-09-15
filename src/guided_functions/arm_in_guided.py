@@ -1,6 +1,6 @@
 import time
 from pymavlink import mavutil
-import guided_functions as gf
+from . import guided_functions as gf
 
 # CONNECTION_STRING = "udpin:127.0.0.1:14551"
 CONNECTION_STRING = "tcp:127.0.0.1:5602"
