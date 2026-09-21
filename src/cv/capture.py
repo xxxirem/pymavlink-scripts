@@ -140,7 +140,7 @@ def camera_worker():
 
     # 640x480 — хорошая картинка для стрима
     config = picam2.create_video_configuration(
-        main={"size": (640, 480), "format": "BGR888"}
+        main={"size": (640, 480), "format": "RGB888"}
     )
     picam2.configure(config)
     picam2.start()
