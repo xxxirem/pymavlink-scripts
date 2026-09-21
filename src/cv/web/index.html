@@ -44,16 +44,6 @@
     <button class="btn-capture" id="captureBtn" onclick="takeSnapshot()">Сделать снимок</button>
 
     <script>
-        setInterval(async () => {
-            try {
-                let res = await fetch('/api/markers');
-                let data = await res.json();
-                document.getElementById('info').innerText =
-                    `Найденные метки: [ ${data.markers.join(', ')} ]`;
-            } catch(e) {}
-        }, 500);
-
-        // Обработчик для кнопки "Сделать снимок"
         async function takeSnapshot() {
             const btn = document.getElementById('captureBtn');
             btn.disabled = true;
@@ -72,13 +62,13 @@
             }
         }
     </script>
+
     <h2>Галерея снимков</h2>
     <div id="photosGallery" class="gallery">
         <p>Загрузка фотографий...</p>
     </div>
 
     <script>
-        // Функция загрузки списка фотографий с бэкенда
         async function loadPhotos() {
             try {
                 const response = await fetch('/api/photos');
@@ -90,7 +80,7 @@
                     return;
                 }
 
-                container.innerHTML = ''; // Очищаем контейнер
+                container.innerHTML = '';
 
                 data.photos.forEach(filename => {
                     const photoUrl = `/photos/${filename}`;
@@ -113,7 +103,6 @@
             }
         }
 
-        // Функция отправки запроса на фото и обновления списка
         async function takePhoto() {
             const btn = document.getElementById('captureBtn');
             btn.disabled = true;
@@ -121,7 +110,6 @@
                 const response = await fetch('/capture', { method: 'POST' });
                 const result = await response.json();
                 if (result.status === 'ok') {
-                    // Обновляем список сразу после сохранения
                     await loadPhotos();
                 }
             } catch (err) {
@@ -130,8 +118,6 @@
                 btn.disabled = false;
             }
         }
-
-        // Загружаем галерею при старте страницы
         loadPhotos();
     </script>
 
