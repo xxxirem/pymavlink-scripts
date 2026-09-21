@@ -110,6 +110,16 @@ class StreamingHandler(BaseHTTPRequestHandler):
                     files.sort(key=lambda x: os.path.getmtime(os.path.join(PHOTO_FOLDER, x)), reverse=True)
                     photos = files
 
+                clean_path = self.path.split("?")[0].lstrip("/")
+                requested_file = os.path.abspath(os.path.join(BASE_DIR, clean_path))
+
+                print(f"[DEBUG] Запрошен путь: {requested_file}")
+                print(f"[DEBUG] Существует ли файл? {os.path.exists(requested_file)}")
+                print(f"[DEBUG] Это файл? {os.path.isfile(requested_file)}")
+
+                if os.path.exists(requested_file):
+                    # Проверяем доступность на чтение
+                    print(f"[DEBUG] Доступен на чтение? {os.access(requested_file, os.R_OK)}")
                 json_data = json.dumps({"photos": photos}).encode("utf-8")
 
                 self.send_response(200)
