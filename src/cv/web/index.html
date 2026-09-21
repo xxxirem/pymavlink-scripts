@@ -1,32 +1,84 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Управление камерой</title>
+    <title>Pi Zero 2 W - ArUco Fast</title>
     <style>
-        body { font-family: sans-serif; margin: 20px; background: #121212; color: #fff; }
-        .gallery { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 15px; }
-        .photo-card { background: #1e1e1e; padding: 10px; border-radius: 8px; text-align: center; }
-        .photo-card img { max-width: 200px; height: auto; border-radius: 4px; display: block; margin-bottom: 8px; }
-        .photo-card a { color: #4da6ff; text-decoration: none; word-break: break-all; }
-        .photo-card a:hover { text-decoration: underline; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        body { background: #121212; color: #fff; text-align: center; font-family: monospace; }
+        img { max-width: 100%; border: 2px solid #00ff88; border-radius: 8px; }
+        #info { margin-top: 15px; font-size: 1.2rem; color: #00ff88; }
+
+        /* Стили для кнопки */
+        .btn-capture {
+            margin-top: 20px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-family: inherit;
+            font-weight: bold;
+            color: #121212;
+            background-color: #00ff88;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn-capture:hover {
+            background-color: #00cc6d;
+        }
+
+        .btn-capture:active {
+            transform: scale(0.96);
+        }
+
+        .btn-capture:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
+    <h2>Optimized ArUco Detector</h2>
+    <img src="/video.mjpg" width="640" height="480" />
+    <div id="info">Ожидание данных...</div>
 
-    <h1>Стрим и управление</h1>
+    <button class="btn-capture" id="captureBtn" onclick="takeSnapshot()">Сделать снимок</button>
 
-    <img src="/video.mjpg" width="640" height="480" alt="Video Stream"><br><br>
+    <script>
+        setInterval(async () => {
+            try {
+                let res = await fetch('/api/markers');
+                let data = await res.json();
+                document.getElementById('info').innerText =
+                    `Найденные метки: [ ${data.markers.join(', ')} ]`;
+            } catch(e) {}
+        }, 500);
 
-    <button id="captureBtn" onclick="takePhoto()">Сделать фото</button>
+        // Обработчик для кнопки "Сделать снимок"
+        async function takeSnapshot() {
+            const btn = document.getElementById('captureBtn');
+            btn.disabled = true;
 
+            try {
+                let res = await fetch('/capture', { method: 'POST' });
+                if (res.ok) {
+                    console.log('Снимок успешно сохранен');
+                } else {
+                    console.error('Ошибка при создании снимка');
+                }
+            } catch(e) {
+                console.error('Ошибка сети:', e);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
     <h2>Галерея снимков</h2>
     <div id="photosGallery" class="gallery">
         <p>Загрузка фотографий...</p>
     </div>
 
     <script>
+        // Функция загрузки списка фотографий с бэкенда
         async function loadPhotos() {
             try {
                 const response = await fetch('/api/photos');
@@ -38,7 +90,7 @@
                     return;
                 }
 
-                container.innerHTML = '';
+                container.innerHTML = ''; // Очищаем контейнер
 
                 data.photos.forEach(filename => {
                     const photoUrl = `/photos/${filename}`;
@@ -61,6 +113,7 @@
             }
         }
 
+        // Функция отправки запроса на фото и обновления списка
         async function takePhoto() {
             const btn = document.getElementById('captureBtn');
             btn.disabled = true;
@@ -68,6 +121,7 @@
                 const response = await fetch('/capture', { method: 'POST' });
                 const result = await response.json();
                 if (result.status === 'ok') {
+                    // Обновляем список сразу после сохранения
                     await loadPhotos();
                 }
             } catch (err) {
@@ -77,7 +131,9 @@
             }
         }
 
+        // Загружаем галерею при старте страницы
         loadPhotos();
     </script>
+
 </body>
 </html>
