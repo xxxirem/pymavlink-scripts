@@ -1,6 +1,7 @@
 import io
 import os
 import time
+import json
 import cv2
 import threading
 from datetime import datetime
@@ -98,9 +99,35 @@ class StreamingHandler(BaseHTTPRequestHandler):
                     self.wfile.write(b"\r\n")
             except Exception:
                 pass
+
+        elif self.path == "/api/photos":
+            try:
+                # Получаем список файлов из папки photos, отсортированный по дате (свежие первые)
+                photos = []
+                if os.path.exists(PHOTO_FOLDER):
+                    files = [f for f in os.listdir(PHOTO_FOLDER) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+                    # Сортировка: самые новые снимки будут первыми в списке
+                    files.sort(key=lambda x: os.path.getmtime(os.path.join(PHOTO_FOLDER, x)), reverse=True)
+                    photos = files
+
+                json_data = json.dumps({"photos": photos}).encode("utf-8")
+
+                self.send_response(200)
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(json_data)))
+                self.end_headers()
+                self.wfile.write(json_data)
+                return
+            except Exception as e:
+                self.send_error_response(f"500: Ошибка сервера ({e})", status=500)
+                return
+
         else:
             self.send_error(404)
             self.end_headers()
+
+
 
     def do_POST(self):
         if self.path == "/capture":
