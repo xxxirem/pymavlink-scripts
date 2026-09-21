@@ -21,8 +21,8 @@ def main():
     gf.set_global_origin(master, LAT, LON, ALT)
     gf.set_mode(master, "GUIDED")
     gf.arm(master)
-    gf.takeoff(master, .5)
-    time.sleep(7)
+    gf.takeoff(master, 1.0)
+    time.sleep(10)
     gf.land(master)
     gf.disarm(master)
 

@@ -7,8 +7,8 @@ ALT = 150.5  # metres
 
 
 def main():
-    connection_string = "udpin:127.0.0.1:14551" # SITL
-    # connection_string = "tcp:127.0.0.1:5602"  # Pi
+    # connection_string = "udpin:127.0.0.1:14551" # SITL
+    connection_string = "tcp:127.0.0.1:5602"  # Pi
     master = mavutil.mavlink_connection(connection_string)
 
     print("Waiting for heartbeat...")
