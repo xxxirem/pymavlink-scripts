@@ -2,7 +2,6 @@ import io
 import os
 import time
 import cv2
-import json
 import threading
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -12,34 +11,6 @@ from picamera2 import Picamera2
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PHOTO_FOLDER = os.path.join(BASE_DIR, "photos")
 os.makedirs(PHOTO_FOLDER, exist_ok=True)
-
-
-class MarkerDataStore:
-    def __init__(self):
-        self.detected_ids = []
-        self.lock = threading.Lock()
-
-    def update_ids(self, new_ids):
-        with self.lock:
-            if set(self.detected_ids) != set(new_ids):
-                if new_ids:
-                    print(f"[INFO SERVER] Метки: {new_ids}")
-                else:
-                    print("[INFO SERVER] Метки потеряны")
-            self.detected_ids = new_ids
-
-    def get_json(self):
-        with self.lock:
-            return json.dumps(
-                {
-                    "timestamp": time.time(),
-                    "count": len(self.detected_ids),
-                    "markers": self.detected_ids,
-                }
-            )
-
-
-marker_store = MarkerDataStore()
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
@@ -91,15 +62,6 @@ class StreamingHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path in ("/", "/index.html", "/stream"):
             self.send_html_file("web/index.html")
-
-        elif self.path == "/api/markers":
-            json_data = marker_store.get_json().encode("utf-8")
-            self.send_response(200)
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(json_data)))
-            self.end_headers()
-            self.wfile.write(json_data)
 
         elif self.path == "/video.mjpg":
             self.send_response(200)
@@ -157,7 +119,9 @@ class StreamingHandler(BaseHTTPRequestHandler):
                 filepath = os.path.join(PHOTO_FOLDER, filename)
                 cv2.imwrite(filepath, frame)
 
-                response = f'{{"status": "ok", "filename": "{filename}"}}'.encode("utf-8")
+                response = f'{{"status": "ok", "filename": "{filename}"}}'.encode(
+                    "utf-8"
+                )
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Content-Length", str(len(response)))
