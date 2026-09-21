@@ -1,4 +1,5 @@
 import io
+import mimetypes
 import os
 import time
 import json
@@ -131,6 +132,30 @@ class StreamingHandler(BaseHTTPRequestHandler):
                 return
             except Exception as e:
                 self.send_error_response(f"500: Ошибка сервера ({e})", status=500)
+                return
+
+        # 4. Обработка статических файлов на диске (картинки, скрипты, стили)
+        # Этот блок должен срабатывать ТОЛЬКО если путь не подошел ни под одно условие выше!
+        clean_path = self.path.split("?")[0].lstrip("/")
+        requested_file = os.path.abspath(os.path.join(BASE_DIR, clean_path))
+
+        if requested_file.startswith(BASE_DIR) and os.path.isfile(requested_file):
+            try:
+                mime_type, _ = mimetypes.guess_type(requested_file)
+                mime_type = mime_type or "application/octet-stream"
+
+                with open(requested_file, "rb") as f:
+                    content = f.read()
+
+                self.send_response(200)
+                self.send_header("Content-Type", mime_type)
+                self.send_header("Content-Length", str(len(content)))
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(content)
+                return
+            except Exception as e:
+                self.send_error_response(f"500: Ошибка чтения файла ({e})", status=500)
                 return
 
         else:
