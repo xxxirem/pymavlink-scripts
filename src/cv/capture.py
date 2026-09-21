@@ -63,8 +63,7 @@ class StreamingHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path in ("/", "/index.html", "/stream"):
-            print("Index page path: " + BASE_DIR + "web/index.html")
-            self.send_html_file(BASE_DIR + "web/index.html")
+            self.send_html_file(BASE_DIR + "/web/index.html")
 
         elif self.path == "/video.mjpg":
             self.send_response(200)
