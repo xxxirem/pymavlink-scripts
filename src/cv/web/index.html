@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pi Zero 2 W - ArUco Fast</title>
+    <style>
+        body { background: #121212; color: #fff; text-align: center; font-family: monospace; }
+        img { max-width: 100%; border: 2px solid #00ff88; border-radius: 8px; }
+        #info { margin-top: 15px; font-size: 1.2rem; color: #00ff88; }
+
+        /* Стили для кнопки */
+        .btn-capture {
+            margin-top: 20px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-family: inherit;
+            font-weight: bold;
+            color: #121212;
+            background-color: #00ff88;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn-capture:hover {
+            background-color: #00cc6d;
+        }
+
+        .btn-capture:active {
+            transform: scale(0.96);
+        }
+
+        .btn-capture:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h2>Optimized ArUco Detector</h2>
+    <img src="/video.mjpg" width="640" height="480" />
+    <div id="info">Ожидание данных...</div>
+
+    <button class="btn-capture" id="captureBtn" onclick="takeSnapshot()">Сделать снимок</button>
+
+    <script>
+        setInterval(async () => {
+            try {
+                let res = await fetch('/api/markers');
+                let data = await res.json();
+                document.getElementById('info').innerText =
+                    `Найденные метки: [ ${data.markers.join(', ')} ]`;
+            } catch(e) {}
+        }, 500);
+
+        // Обработчик для кнопки "Сделать снимок"
+        async function takeSnapshot() {
+            const btn = document.getElementById('captureBtn');
+            btn.disabled = true;
+
+            try {
+                let res = await fetch('/capture', { method: 'POST' });
+                if (res.ok) {
+                    console.log('Снимок успешно сохранен');
+                } else {
+                    console.error('Ошибка при создании снимка');
+                }
+            } catch(e) {
+                console.error('Ошибка сети:', e);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
