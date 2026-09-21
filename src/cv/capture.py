@@ -143,31 +143,28 @@ class StreamingHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == "/capture":
             try:
-                while True:
-                    with output.condition:
-                        if not output.condition.wait(timeout=1.0):
-                            continue
-                        frame = output.frame
+                with output.condition:
+                    if not output.condition.wait(timeout=1.0):
+                        self.send_error_response("500: Timeout", 500)
+                        return
+                    frame = output.frame
 
-                    if frame is None:
-                        continue
+                if frame is None:
+                    self.send_error_response("500: Timeout", 500)
+                    return
 
-                    ret, jpeg = cv2.imencode(
-                        ".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 50]
-                    )
-                    if not ret:
-                        continue
-                    filename = datetime.now().strftime("photo_%Y%m%d_%H%M%S.jpg")
-                    filepath = os.path.join(PHOTO_FOLDER, filename)
-                    cv2.imwrite(filepath, frame)
+                filename = datetime.now().strftime("photo_%Y%m%d_%H%M%S.jpg")
+                filepath = os.path.join(PHOTO_FOLDER, filename)
+                cv2.imwrite(filepath, frame)
 
-                    self.send_response(200)
-                    self.send_header("Content-Type", "application/json")
-                    self.end_headers()
-                    response = f'{{"status": "ok", "filename": "{filename}"}}'
-                    self.wfile.write(response.encode("utf-8"))
+                response = f'{{"status": "ok", "filename": "{filename}"}}'.encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(response)))
+                self.end_headers()
+                self.wfile.write(response)
             except Exception:
-                pass
+                self.send_error_response("500: Saving Error", 500)
         else:
             self.send_error(404)
             self.end_headers()
