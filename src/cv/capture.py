@@ -63,6 +63,7 @@ class StreamingHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path in ("/", "/index.html", "/stream"):
+            print("Index page path: " + BASE_DIR + "web/index.html")
             self.send_html_file(BASE_DIR + "web/index.html")
 
         elif self.path == "/video.mjpg":
@@ -106,9 +107,16 @@ class StreamingHandler(BaseHTTPRequestHandler):
                 # Получаем список файлов из папки photos, отсортированный по дате (свежие первые)
                 photos = []
                 if os.path.exists(PHOTO_FOLDER):
-                    files = [f for f in os.listdir(PHOTO_FOLDER) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+                    files = [
+                        f
+                        for f in os.listdir(PHOTO_FOLDER)
+                        if f.lower().endswith((".jpg", ".jpeg", ".png"))
+                    ]
                     # Сортировка: самые новые снимки будут первыми в списке
-                    files.sort(key=lambda x: os.path.getmtime(os.path.join(PHOTO_FOLDER, x)), reverse=True)
+                    files.sort(
+                        key=lambda x: os.path.getmtime(os.path.join(PHOTO_FOLDER, x)),
+                        reverse=True,
+                    )
                     photos = files
 
                 clean_path = self.path.split("?")[0].lstrip("/")
@@ -120,7 +128,9 @@ class StreamingHandler(BaseHTTPRequestHandler):
 
                 if os.path.exists(requested_file):
                     # Проверяем доступность на чтение
-                    print(f"[DEBUG] Доступен на чтение? {os.access(requested_file, os.R_OK)}")
+                    print(
+                        f"[DEBUG] Доступен на чтение? {os.access(requested_file, os.R_OK)}"
+                    )
                 json_data = json.dumps({"photos": photos}).encode("utf-8")
 
                 self.send_response(200)
@@ -161,8 +171,6 @@ class StreamingHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
             self.end_headers()
-
-
 
     def do_POST(self):
         if self.path == "/capture":
