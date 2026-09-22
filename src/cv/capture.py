@@ -118,18 +118,6 @@ class StreamingHandler(BaseHTTPRequestHandler):
                     )
                     photos = files
 
-                clean_path = self.path.split("?")[0].lstrip("/")
-                requested_file = os.path.abspath(os.path.join(BASE_DIR, clean_path))
-
-                print(f"[DEBUG] Запрошен путь: {requested_file}")
-                print(f"[DEBUG] Существует ли файл? {os.path.exists(requested_file)}")
-                print(f"[DEBUG] Это файл? {os.path.isfile(requested_file)}")
-
-                if os.path.exists(requested_file):
-                    # Проверяем доступность на чтение
-                    print(
-                        f"[DEBUG] Доступен на чтение? {os.access(requested_file, os.R_OK)}"
-                    )
                 json_data = json.dumps({"photos": photos}).encode("utf-8")
 
                 self.send_response(200)
@@ -235,7 +223,7 @@ def main():
 
     server_address = ("", 8080)
     httpd = ThreadedHTTPServer(server_address, StreamingHandler)
-    print("[HTTP] Оптимизированный сервер запущен на 8080...")
+    print("[HTTP] Оптимизированный сервер   ущен на 8080...")
 
     try:
         httpd.serve_forever()
