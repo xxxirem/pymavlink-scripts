@@ -14,24 +14,25 @@ HTTP_PORT = 8080
 FRAME_W, FRAME_H = 640, 480
 ARUCO_DICT = cv.aruco.DICT_4X4_50
 
-# Конфигурация посадочной доски: ID и физический размер стороны в метрах
 TARGET_MARKERS = {
     22: 0.034,  # 34 мм — приоритет 1 (главная цель посадки)
     33: 0.067,  # 67 мм — приоритет 2 (средняя высота)
-    44: 0.126   # 126 мм — приоритет 3 (большая высота)
+    44: 0.126,  # 126 мм — приоритет 3 (большая высота)
 }
 
 # Порядок приоритета: от самой точной к самой крупной
 PRIORITY_ORDER = [22, 33, 44]
 
-SERIAL_IP = "tcp:127.0.0.1:5601"  # Port связи с полетником
+# SERIAL_IP = "tcp:127.0.0.1:5601"
+SERIAL_IP = "udpout:127.0.0.1:14551"
+
 BAUD = 921600
-USE_FULL_POSE = False   # True: расчет xyz + position_valid=1; False: только углы
+USE_FULL_POSE = False  # True: расчет xyz + position_valid=1; False: только углы
 
 # --- Load calibration ---
-fs = cv.FileStorage('calibration/camera.yaml', cv.FILE_STORAGE_READ)
-K = fs.getNode('camera_matrix').mat()
-D = fs.getNode('distortion_coefficients').mat()
+fs = cv.FileStorage("calibration/camera.yaml", cv.FILE_STORAGE_READ)
+K = fs.getNode("camera_matrix").mat()
+D = fs.getNode("distortion_coefficients").mat()
 fs.release()
 
 # --- Global Storage & Locks ---
@@ -44,13 +45,16 @@ distance_lock = threading.Lock()
 
 class MJPEGHandler(BaseHTTPRequestHandler):
     """HTTP-сервер для видеопотока."""
+
     def do_GET(self):
         if self.path in ("/", "/stream"):
             self.send_response(200)
             self.send_header("Age", 0)
             self.send_header("Cache-Control", "no-cache, private")
             self.send_header("Pragma", "no-cache")
-            self.send_header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
+            self.send_header(
+                "Content-Type", "multipart/x-mixed-replace; boundary=frame"
+            )
             self.end_headers()
 
             while True:
@@ -84,23 +88,39 @@ def run_http_server():
     server.serve_forever()
 
 
+def check_connection(master_instance, timeout=5):
+    """Waits for heartbeat and returns True/False if connected/disconnected
+    respectively. Prints to the console."""
+    start_time = time.time()
+    while time.time() - start_time <= timeout:
+        master_instance.wait_heartbeat(timeout=1.0)
+        if master_instance.target_system != 0:
+            print(
+                f"[Connected] System ID: {master_instance.target_system}, Component ID: {master_instance.target_component}"
+            )
+            return True
+        else:
+            print(
+                f"[Wrong ID] System ID: {master_instance.target_system} Trying again..."
+            )
+    print("[Timeout] Connection failed")
+    return False
+
+
 # --- MAVLink connection ---
 m = mavutil.mavlink_connection(SERIAL_IP)
-try:
-    m.wait_heartbeat(timeout=5)
-    print("[MAVLink] Heartbeat получен")
-except Exception:
-    print("[MAVLink] Heartbeat не получен, продолжаем...")
-
+while (not check_connection(m)) {
+    print("[MAVLink] Reconnecting...")
+}
 
 def mavlink_altitude_listener():
     """Фоновый поток считывания высоты по MAVLink."""
     global current_distance
     while True:
         msg = m.recv_match(
-            type=['DISTANCE_SENSOR', 'LOCAL_POSITION_NED', 'GLOBAL_POSITION_INT'],
+            type=["DISTANCE_SENSOR", "LOCAL_POSITION_NED", "GLOBAL_POSITION_INT"],
             blocking=True,
-            timeout=0.5
+            timeout=0.5,
         )
         if msg is None:
             continue
@@ -110,7 +130,7 @@ def mavlink_altitude_listener():
 
         # if msg_type == 'DISTANCE_SENSOR':
         #     alt = msg.current_distance / 100.0
-        if msg_type == 'LOCAL_POSITION_NED':
+        if msg_type == "LOCAL_POSITION_NED":
             alt = -msg.z
         # elif msg_type == 'GLOBAL_POSITION_INT':
         #     alt = msg.relative_alt / 1000.0
@@ -126,7 +146,9 @@ threading.Thread(target=mavlink_altitude_listener, daemon=True).start()
 # --- Инициализация камеры ---
 print("[CAM] Инициализация Picamera2...")
 picam2 = Picamera2()
-config = picam2.create_video_configuration(main={"size": (FRAME_W, FRAME_H), "format": "RGB888"})
+config = picam2.create_video_configuration(
+    main={"size": (FRAME_W, FRAME_H), "format": "RGB888"}
+)
 picam2.configure(config)
 picam2.start()
 
@@ -135,13 +157,15 @@ dict_ = cv.aruco.getPredefinedDictionary(ARUCO_DICT)
 params = cv.aruco.DetectorParameters()
 detector = cv.aruco.ArucoDetector(dict_, params)
 
+
 def center_from_corners(corners):
     pts = corners.reshape(-1, 2)
     c = pts.mean(axis=0)
     return float(c[0]), float(c[1])
 
-fx, fy = K[0,0], K[1,1]
-cx, cy = K[0,2], K[1,2]
+
+fx, fy = K[0, 0], K[1, 1]
+cx, cy = K[0, 2], K[1, 2]
 
 send_rate_hz = 20.0
 send_period = 1.0 / send_rate_hz
@@ -184,14 +208,19 @@ while True:
             position_valid = 0
 
             if USE_FULL_POSE:
-                obj_pts = np.array([
-                    [-tag_size/2,  tag_size/2, 0],
-                    [ tag_size/2,  tag_size/2, 0],
-                    [ tag_size/2, -tag_size/2, 0],
-                    [-tag_size/2, -tag_size/2, 0],
-                ], dtype=np.float32)
-                img_pts = marker_corners.reshape(-1,2).astype(np.float32)
-                okp, rvec, tvec = cv.solvePnP(obj_pts, img_pts, K, D, flags=cv.SOLVEPNP_IPPE_SQUARE)
+                obj_pts = np.array(
+                    [
+                        [-tag_size / 2, tag_size / 2, 0],
+                        [tag_size / 2, tag_size / 2, 0],
+                        [tag_size / 2, -tag_size / 2, 0],
+                        [-tag_size / 2, -tag_size / 2, 0],
+                    ],
+                    dtype=np.float32,
+                )
+                img_pts = marker_corners.reshape(-1, 2).astype(np.float32)
+                okp, rvec, tvec = cv.solvePnP(
+                    obj_pts, img_pts, K, D, flags=cv.SOLVEPNP_IPPE_SQUARE
+                )
                 if okp:
                     x_b = float(tvec[2])
                     y_b = float(tvec[0])
@@ -210,13 +239,17 @@ while True:
                     int(tnow * 1e6),
                     0,
                     mavutil.mavlink.MAV_FRAME_BODY_FRD,
-                    float(angle_x), float(angle_y),
-                    0.0,                # distance (0.0 — работа с бортовым дальномером)
-                    tag_size, tag_size, # size_x, size_y текущей метки
-                    x_b, y_b, z_b,
+                    float(angle_x),
+                    float(angle_y),
+                    0.0,  # distance (0.0 — работа с бортовым дальномером)
+                    tag_size,
+                    tag_size,  # size_x, size_y текущей метки
+                    x_b,
+                    y_b,
+                    z_b,
                     [1.0, 0.0, 0.0, 0.0],
                     mavutil.mavlink.LANDING_TARGET_TYPE_VISION_FIDUCIAL,
-                    position_valid
+                    position_valid,
                 )
 
             # Вывод логов в консоль (2 Гц)
@@ -224,7 +257,9 @@ while True:
                 next_log_time = tnow + log_period
                 with distance_lock:
                     telemetry_alt = current_distance
-                print(f"[TARGET LOCK] ID: {active_id} ({tag_size*1000:.0f}mm) | AngX: {angle_x:.3f} rad | AngY: {angle_y:.3f} rad | MAV Alt: {telemetry_alt:.2f} m")
+                print(
+                    f"[TARGET LOCK] ID: {active_id} ({tag_size*1000:.0f}mm) | AngX: {angle_x:.3f} rad | AngY: {angle_y:.3f} rad | MAV Alt: {telemetry_alt:.2f} m"
+                )
 
     # Кодирование кадра для веб-сервера
     _, jpg = cv.imencode(".jpg", draw_frame, [cv.IMWRITE_JPEG_QUALITY, 80])
