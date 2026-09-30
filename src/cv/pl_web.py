@@ -109,9 +109,8 @@ def check_connection(master_instance, timeout=5):
 
 # --- MAVLink connection ---
 m = mavutil.mavlink_connection(SERIAL_IP)
-while (not check_connection(m)) {
+while (not check_connection(m)):
     print("[MAVLink] Reconnecting...")
-}
 
 def mavlink_altitude_listener():
     """Фоновый поток считывания высоты по MAVLink."""
