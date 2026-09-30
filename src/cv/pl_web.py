@@ -24,7 +24,7 @@ TARGET_MARKERS = {
 # Порядок приоритета: от самой точной к самой крупной
 PRIORITY_ORDER = [22, 33, 44]
 
-SERIAL_IP = "tcp:127.0.0.1:5602"  # Port связи с полетником
+SERIAL_IP = "tcp:127.0.0.1:5601"  # Port связи с полетником
 BAUD = 921600
 USE_FULL_POSE = False   # True: расчет xyz + position_valid=1; False: только углы
 
