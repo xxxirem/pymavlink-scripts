@@ -29,7 +29,7 @@ BAUD = 921600
 USE_FULL_POSE = False   # True: расчет xyz + position_valid=1; False: только углы
 
 # --- Load calibration ---
-fs = cv.FileStorage('../calibration/camera.yaml', cv.FILE_STORAGE_READ)
+fs = cv.FileStorage('calibration/camera.yaml', cv.FILE_STORAGE_READ)
 K = fs.getNode('camera_matrix').mat()
 D = fs.getNode('distortion_coefficients').mat()
 fs.release()
