@@ -108,12 +108,12 @@ def mavlink_altitude_listener():
         msg_type = msg.get_type()
         alt = None
 
-        if msg_type == 'DISTANCE_SENSOR':
-            alt = msg.current_distance / 100.0
-        elif msg_type == 'LOCAL_POSITION_NED':
+        # if msg_type == 'DISTANCE_SENSOR':
+        #     alt = msg.current_distance / 100.0
+        if msg_type == 'LOCAL_POSITION_NED':
             alt = -msg.z
-        elif msg_type == 'GLOBAL_POSITION_INT':
-            alt = msg.relative_alt / 1000.0
+        # elif msg_type == 'GLOBAL_POSITION_INT':
+        #     alt = msg.relative_alt / 1000.0
 
         if alt is not None and alt >= 0:
             with distance_lock:
