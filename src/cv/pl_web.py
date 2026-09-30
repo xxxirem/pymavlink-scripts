@@ -93,8 +93,14 @@ def check_connection(master_instance, timeout=5):
     respectively. Prints to the console."""
     start_time = time.time()
     while time.time() - start_time <= timeout:
-        master_instance.wait_heartbeat(timeout=1.0)
-        if master_instance.target_system != 0:
+        master_instance.mav.heartbeat_send(
+            mavutil.mavlink.MAV_TYPE_ONBOARD_CONTROLLER,
+            mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+            0, 0, 0
+        )
+
+        msg = master_instance.wait_heartbeat(timeout=1.0)
+        if msg is not None and master_instance.target_system != 0:
             print(
                 f"[Connected] System ID: {master_instance.target_system}, Component ID: {master_instance.target_component}"
             )
