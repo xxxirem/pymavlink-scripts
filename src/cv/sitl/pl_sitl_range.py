@@ -9,32 +9,6 @@ from gz.transport13 import Node
 from gz.msgs10.image_pb2 import Image
 
 
-def recv_ack(master_instance, command, timeout=3):
-    cmd_ack_flags = {
-        "0": "Accepted",
-        "1": "Temporarily Rejected",
-        "2": "Denied",
-        "3": "Unsupported",
-        "4": "Failed",
-        "5": "In Progress",
-        "6": "Cancelled",
-        "7": "CMD_LONG Only",
-        "8": "CMD_INT Only",
-        "9": "CMD Unsupported MAV_FRAME",
-        "10": "Not In Control",
-    }
-
-    ack = master_instance.recv_match(type="COMMAND_ACK", blocking=True, timeout=timeout)
-    if ack and ack.command == command:
-        if ack.result == 0:
-            print(
-                f"[Accepted] COMMAND_ACK.result: {ack.result} ({cmd_ack_flags[str(ack.result)]})"
-            )
-        else:
-            print(
-                f"[Not Accepted] COMMAND_ACK.result: {ack.result} ({cmd_ack_flags[str(ack.result)]})"
-            )
-
 CAMERA_TOPIC = "/iris/camera/image_raw"
 HTTP_PORT = 8080
 
@@ -48,7 +22,7 @@ BAUD = 921600                # or 57600 depending on your setup
 USE_FULL_POSE = False        # True: send xyz + position_valid=1; False: angles-only
 
 # --- Load calibration ---
-fs = cv.FileStorage('calibration/camera.yaml', cv.FILE_STORAGE_READ)
+fs = cv.FileStorage('../calibration/camera.yaml', cv.FILE_STORAGE_READ)
 K = fs.getNode('camera_matrix').mat()
 D = fs.getNode('distortion_coefficients').mat()
 fs.release()
