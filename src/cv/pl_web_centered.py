@@ -21,7 +21,7 @@ TARGET_MARKERS = {
 }
 
 # Порядок приоритета: от самой точной к самой крупной
-PRIORITY_ORDER = [33]
+PRIORITY_ORDER = [22, 33, 44]
 
 # SERIAL_IP = "tcp:127.0.0.1:5601"
 SERIAL_IP = "udpout:127.0.0.1:14551"
@@ -200,8 +200,8 @@ while True:
 
         # 2. Если найдена хотя бы одна целевая метка из нашего списка
         if active_id is not None:
-            tag_size = TARGET_MARKERS[33]
-            idx = np.where(detected_ids == 33)[0][0]
+            tag_size = TARGET_MARKERS[22]
+            idx = np.where(detected_ids == 22)[0][0]
             marker_corners = corners[idx]
 
             # Вычисление углов относительно оптической оси
