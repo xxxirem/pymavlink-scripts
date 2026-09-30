@@ -5,6 +5,8 @@ EPSILON = 0.15
 
 
 def check_connection(master_instance, timeout=5):
+    """Waits for heartbeat and returns True/False if connected/disconnected
+    respectively. Prints to the console."""
     start_time = time.time()
     while time.time() - start_time <= timeout:
         master_instance.wait_heartbeat(timeout=1.0)
@@ -26,6 +28,7 @@ def print_status(master_instance):
 
 
 def recv_ack(master_instance, command, timeout=3):
+    """"""
     cmd_ack_flags = {
         "0": "Accepted",
         "1": "Temporarily Rejected",
@@ -53,6 +56,7 @@ def recv_ack(master_instance, command, timeout=3):
 
 
 def set_home(master_instance):
+    """Sets home position via MAV_CMD_DO_SET_HOME"""
     master_instance.mav.command_long_send(
         master_instance.target_system,
         master_instance.target_component,
@@ -71,7 +75,8 @@ def set_home(master_instance):
 
 
 def set_global_origin(master_instance, lat, lon, alt):
-    """Sets EKF Origin required for navigation in local coordinates (LOCAL_POSITION_NED)"""
+    """Sets EKF Origin required for navigation in local coordinates
+    (LOCAL_POSITION_NED)"""
     # convertation
     lat_int = int(lat * 1e7)
     lon_int = int(lon * 1e7)
@@ -100,7 +105,8 @@ def set_global_origin(master_instance, lat, lon, alt):
 
 
 def print_global_origin(master_instance):
-    """Prints Global (EKF) origin"""
+    """Prints Global (EKF) origin. Sends MAV_CMD_REQUEST_MESSAGE then waits
+    for response and outputs EKF Origin coordinates"""
     MSG_GPS_GLOBAL_ORIGIN = 49
 
     master_instance.mav.command_long_send(
@@ -134,6 +140,7 @@ def print_global_origin(master_instance):
 
 
 def set_mode(master_instance, mode_name):
+    """Sets the mode and waits untill it is changed."""
     mode_id = master_instance.mode_mapping().get(mode_name)
     if mode_id is None:
         return False
@@ -149,6 +156,7 @@ def set_mode(master_instance, mode_name):
 
 
 def arm(master_instance):
+    """Sends MAV_CMD_COMPONENT_ARM_DISARM and waits until motors are armed"""
     master_instance.mav.command_long_send(
         master_instance.target_system,
         master_instance.target_component,
@@ -169,6 +177,7 @@ def arm(master_instance):
 
 
 def disarm(master_instance):
+    """Sends MAV_CMD_COMPONENT_ARM_DISARM and waits until motors are disarmed"""
     master_instance.mav.command_long_send(
         master_instance.target_system,
         master_instance.target_component,
@@ -189,6 +198,7 @@ def disarm(master_instance):
 
 
 def takeoff(master_instance, target_alt=1.0):
+    """Takeoff via MAV_CMD_NAV_TAKEOFF. Frame is LOCAL_POSITION_NED"""
     master_instance.mav.command_long_send(
         master_instance.target_system,
         master_instance.target_component,
@@ -228,7 +238,8 @@ def takeoff(master_instance, target_alt=1.0):
 
 
 def move_relative(master_instance, dx, dy, dz):
-    """Задает положение по относительным координатам, положительное значение dx - вперед, dy - вправо, dz - вниз"""
+    """Move copter via SET_POSITION_TARGET_LOCAL_NED.
+    Positive dx, dy, dz stand for forward, right, down"""
     type_mask = 0b0000101111000000
     init_x, init_y, init_z = None, None, None
     print("[Move Relative] Getting initial position...")
@@ -295,6 +306,7 @@ def move_relative(master_instance, dx, dy, dz):
 
 
 def land(master_instance):
+    """Sets mode LAND and waits untill motors are disarmed."""
     print("[Land] Command SET_MODE (LAND) send.")
     set_mode(master_instance, "LAND")
     while master_instance.motors_armed():
@@ -302,6 +314,7 @@ def land(master_instance):
 
 
 def print_loc_pos(master_instance, duration=5.0):
+    """Outputs current LOCAL_POSITION_NED."""
     start_time = time.time()
     while time.time() - start_time < duration:
         msg = master_instance.recv_match(

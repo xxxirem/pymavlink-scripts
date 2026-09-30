@@ -10,7 +10,6 @@ from gz.msgs10.image_pb2 import Image
 
 
 def recv_ack(master_instance, command, timeout=3):
-    """"""
     cmd_ack_flags = {
         "0": "Accepted",
         "1": "Temporarily Rejected",
@@ -43,7 +42,7 @@ HTTP_PORT = 8080
 FRAME_W, FRAME_H = 640, 480
 ARUCO_DICT = cv.aruco.DICT_4X4_50
 TAG_ID = 33
-TAG_SIZE_M = 0.5  # marker side length in meters (used only if you want pose/xyz)
+TAG_SIZE_M = 0.2  # marker side length in meters
 SERIAL_IP = "udpin:127.0.0.1:14551"  # Pixhawk TELEM port wired to Pi UART
 BAUD = 921600                # or 57600 depending on your setup
 USE_FULL_POSE = False        # True: send xyz + position_valid=1; False: angles-only
@@ -54,10 +53,13 @@ K = fs.getNode('camera_matrix').mat()
 D = fs.getNode('distortion_coefficients').mat()
 fs.release()
 
-# --- Global Frame Storage ---
+# --- Global Frame & Distance Storage ---
 latest_frame = None
 latest_jpeg = None
 frame_lock = threading.Lock()
+
+current_distance = 0.0
+distance_lock = threading.Lock()
 
 
 def image_callback(msg: Image) -> None:
@@ -167,22 +169,56 @@ def run_http_server():
     server.serve_forever()
 
 
-# --- Запуск фоновых потоков ---
-threading.Thread(target=gazebo_listener, daemon=True).start()
-threading.Thread(target=run_http_server, daemon=True).start()
-
-aruco = cv.aruco
-dict_ = aruco.getPredefinedDictionary(ARUCO_DICT)
-params = aruco.DetectorParameters()
-detector = aruco.ArucoDetector(dict_, params)
-
-# MAVLink connection
+# --- MAVLink connection ---
 m = mavutil.mavlink_connection(SERIAL_IP)
 try:
     m.wait_heartbeat(timeout=5)
     print("[MAVLink] Heartbeat получен")
 except Exception:
     print("[MAVLink] Heartbeat не получен, продолжаем...")
+
+
+def mavlink_altitude_listener():
+    """Отдельный поток для постоянного считывания высоты из MAVLink."""
+    global current_distance
+    while True:
+        # Слушаем физический дальномер (DISTANCE_SENSOR) или локальную/относительную высоту
+        msg = m.recv_match(
+            type=['DISTANCE_SENSOR', 'LOCAL_POSITION_NED', 'GLOBAL_POSITION_INT'],
+            blocking=True,
+            timeout=0.5
+        )
+        if msg is None:
+            continue
+
+        msg_type = msg.get_type()
+        alt = None
+
+        if msg_type == 'DISTANCE_SENSOR':
+            # Расстояние в см -> переводим в метры
+            alt = msg.current_distance / 100.0
+        elif msg_type == 'LOCAL_POSITION_NED':
+            # В системе NED ось Z направлена вниз, поэтому высота над землей = -z
+            alt = -msg.z
+        elif msg_type == 'GLOBAL_POSITION_INT':
+            # Относительная высота в мм -> переводим в метры
+            alt = msg.relative_alt / 1000.0
+
+        if alt is not None and alt >= 0:
+            with distance_lock:
+                current_distance = float(alt)
+
+
+# --- Запуск фоновых потоков ---
+threading.Thread(target=gazebo_listener, daemon=True).start()
+threading.Thread(target=run_http_server, daemon=True).start()
+threading.Thread(target=mavlink_altitude_listener, daemon=True).start()
+
+aruco = cv.aruco
+dict_ = aruco.getPredefinedDictionary(ARUCO_DICT)
+params = aruco.DetectorParameters()
+detector = aruco.ArucoDetector(dict_, params)
+
 
 def center_from_corners(corners):
     pts = corners.reshape(-1, 2)
@@ -249,21 +285,25 @@ while True:
         if tnow >= next_t:
             next_t += period
 
+            # Получаем последнее актуальное значение высоты из фонового потока
+            with distance_lock:
+                dist = current_distance
+
             # LANDING_TARGET send
             m.mav.landing_target_send(
                 int(tnow * 1e6),        # time_usec
                 0,                      # target_num
-                mavutil.mavlink.MAV_FRAME_BODY_NED,
+                mavutil.mavlink.MAV_FRAME_BODY_FRD,
                 float(angle_x), float(angle_y),
-                0.0,                    # distance
+                dist,                   # distance (высота до земли в метрах)
                 TAG_SIZE_M, TAG_SIZE_M, # size_x, size_y
                 x_b, y_b, z_b,          # position in body frame
                 [1.0, 0.0, 0.0, 0.0],   # orientation
                 mavutil.mavlink.LANDING_TARGET_TYPE_VISION_FIDUCIAL,
                 position_valid
             )
-            print("[LANDING_TARGET] message sended.")
-    print(corners)
+            print(f"[LANDING_TARGET] sended. Distance: {dist:.2f} m")
+
     # Кодирование кадра с метками в JPEG и обновление глобальной переменной для HTTP
     _, jpg = cv.imencode(".jpg", draw_frame, [cv.IMWRITE_JPEG_QUALITY, 80])
     with frame_lock:

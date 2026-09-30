@@ -1,3 +1,5 @@
+# Using stream.html page
+
 import io
 import mimetypes
 import os
@@ -62,8 +64,8 @@ class StreamingHandler(BaseHTTPRequestHandler):
         self.wfile.write(message.encode("utf-8"))
 
     def do_GET(self):
-        if self.path in ("/", "/index.html", "/stream"):
-            self.send_html_file(BASE_DIR + "/web/index.html")
+        if self.path in ("/", "/stream.html", "/stream"):
+            self.send_html_file(BASE_DIR + "/web/stream.html")
 
         elif self.path == "/video.mjpg":
             self.send_response(200)
