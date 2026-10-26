@@ -24,7 +24,7 @@ def main():
     gf.arm(master)
     gf.takeoff(master, 2.5)
     time.sleep(3)
-    gf.move_relative(master, 0, 1.5, 0)
+    gf.move_relative(master, 0.1, 1.5, 0)
     time.sleep(3)
     # gf.move_relative(master, -0.5, 0, 0)
     # time.sleep(3)
