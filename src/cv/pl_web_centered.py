@@ -19,10 +19,14 @@ TARGET_MARKERS = {
     33: 0.067,  # 67 мм — приоритет 2 (средняя высота)
     44: 0.126,  # 126 мм — приоритет 3 (большая высота)
 }
-
-# Порядок приоритета: от самой точной к самой крупной
 PRIORITY_ORDER = [22, 33, 44]
-
+# Смещение центра каждой метки относительно центра ID 22 (в метрах): (dx, dy)
+# TODO заполнить значения
+OFFSETS = {
+    22: (0.0, 0.0),
+    33: (0.08, -0.05),
+    44: (-0.12, 0.10)
+}
 # SERIAL_IP = "tcp:127.0.0.1:5601"
 SERIAL_IP = "udpout:127.0.0.1:14551"
 
@@ -191,21 +195,27 @@ while True:
         cv.aruco.drawDetectedMarkers(draw_frame, corners, ids)
         detected_ids = ids.flatten()
 
-        # 1. Поиск наиболее приоритетной метки из доступных на кадре
         active_id = None
         for candidate_id in PRIORITY_ORDER:
             if candidate_id in detected_ids:
                 active_id = candidate_id
                 break
 
-        # 2. Если найдена хотя бы одна целевая метка из нашего списка
         if active_id is not None:
-            tag_size = TARGET_MARKERS[22]
-            idx = np.where(detected_ids == 22)[0][0]
+            tag_size = TARGET_MARKERS[active_id]
+            idx = np.where(detected_ids == active_id)[0][0]
             marker_corners = corners[idx]
 
-            # Вычисление углов относительно оптической оси
             u, v = center_from_corners(marker_corners)
+
+            # Компенсация смещения относительно ID 22
+            dx_m, dy_m = OFFSETS.get(active_id, (0.0, 0.0))
+            if dx_m != 0.0 or dy_m != 0.0:
+                with distance_lock:
+                    alt_eff = max(current_distance, 0.3)
+                u += (dx_m * fx) / alt_eff
+                v += (dy_m * fy) / alt_eff
+
             angle_x = math.atan2((u - cx) / fx, 1.0)
             angle_y = math.atan2((v - cy) / fy, 1.0)
 
