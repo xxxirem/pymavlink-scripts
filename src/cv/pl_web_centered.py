@@ -7,6 +7,7 @@ import cv2 as cv
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pymavlink import mavutil
 from picamera2 import Picamera2
+from libcamera import controls
 
 HTTP_PORT = 8080
 
@@ -158,6 +159,13 @@ picam2 = Picamera2()
 config = picam2.create_video_configuration(
     main={"size": (FRAME_W, FRAME_H), "format": "RGB888"}
 )
+
+picam2.set_controls({
+    "AfMode": controls.AfModeEnum.Continuous,
+    "AfSpeed": controls.AfSpeedEnum.Fast,
+})
+
+
 picam2.configure(config)
 picam2.start()
 

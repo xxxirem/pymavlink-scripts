@@ -181,10 +181,10 @@ config = picam2.create_video_configuration(
 # picam2.configure(config)
 picam2.configure(config)
 
-picam2.set_controls({
-    "AfMode": controls.AfModeEnum.Continuous,
-    "AfSpeed": controls.AfSpeedEnum.Fast,
-})
+# picam2.set_controls({
+#     "AfMode": controls.AfModeEnum.Continuous,
+#     "AfSpeed": controls.AfSpeedEnum.Fast,
+# })
 
 picam2.start()
 
