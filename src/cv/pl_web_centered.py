@@ -156,18 +156,21 @@ threading.Thread(target=mavlink_altitude_listener, daemon=True).start()
 # --- Инициализация камеры ---
 print("[CAM] Инициализация Picamera2...")
 picam2 = Picamera2()
-config = picam2.create_video_configuration(
+
+config = picam2.create_preview_configuration(
     main={"size": (FRAME_W, FRAME_H), "format": "RGB888"}
 )
+
+picam2.configure(config)
 
 picam2.set_controls({
     "AfMode": controls.AfModeEnum.Continuous,
     "AfSpeed": controls.AfSpeedEnum.Fast,
 })
 
-
-picam2.configure(config)
 picam2.start()
+print("[CAM] Камера успешно запущена через Preview-конфигурацию!")
+
 
 # --- Инициализация ArUco ---
 dict_ = cv.aruco.getPredefinedDictionary(ARUCO_DICT)
