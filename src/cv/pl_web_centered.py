@@ -158,7 +158,7 @@ print("[CAM] Инициализация Picamera2...")
 picam2 = Picamera2()
 
 config = picam2.create_preview_configuration(
-    main={"size": (FRAME_W, FRAME_H), "format": "RGB888"}
+    main={"size": (FRAME_W, FRAME_H), "format": "BGR888"}
 )
 
 picam2.configure(config)
