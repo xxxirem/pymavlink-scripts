@@ -1,4 +1,5 @@
 import io
+from logging import config
 import time
 import math
 import threading
@@ -7,6 +8,7 @@ import cv2 as cv
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pymavlink import mavutil
 from picamera2 import Picamera2
+from libcamera import controls
 
 HTTP_PORT = 8080
 
@@ -177,10 +179,6 @@ picam2 = Picamera2()
 #     main={"size": (FRAME_W, FRAME_H), "format": "RGB888"}
 # )
 # picam2.configure(config)
-
-config = picam2.create_configuration()
-config["main"] = {"size": (FRAME_W, FRAME_H), "format": "RGB888"}
-
 picam2.configure(config)
 
 picam2.set_controls({
