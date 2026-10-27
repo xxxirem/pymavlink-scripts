@@ -227,11 +227,8 @@ class MavlinkNode:
             conn = None
             try:
                 conn = mavutil.mavlink_connection(self.url)
-                hb = conn.wait_heartbeat(timeout=8)
-                if hb is None:
+                if not self._handshake(conn):
                     raise RuntimeError("нет heartbeat")
-                conn.target_system = hb.get_srcSystem()
-                conn.target_component = hb.get_srcComponent()
                 print("[MAV] connected")
                 with self._lock:
                     self._link = True
@@ -247,6 +244,29 @@ class MavlinkNode:
                     except Exception:
                         pass
             self._stop.wait(1.0)
+
+    def _handshake(self, conn, timeout: float = 10.0) -> bool:
+        """Анонсировать себя heartbeat'ом и дождаться ответного heartbeat от ПК.
+
+        Для udpout это обязательно: pymavlink ничего не отправляет, пока мы не
+        вызовем *_send, поэтому удалённый маршрутизатор (mavlink-router/MAVProxy
+        в режиме сервера) не знает наш адрес и не пересылает телеметрию — тогда
+        одиночный wait_heartbeat() просто виснет. Шлём heartbeat перед каждым
+        ожиданием, как в рабочем pl_web_centered_light.py.
+        """
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline and not self._stop.is_set():
+            conn.mav.heartbeat_send(
+                mavutil.mavlink.MAV_TYPE_ONBOARD_CONTROLLER,
+                mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+                0, 0, 0,
+            )
+            hb = conn.wait_heartbeat(timeout=1.0)
+            if hb is not None and hb.get_srcSystem() != conn.source_system:
+                conn.target_system = hb.get_srcSystem()
+                conn.target_component = hb.get_srcComponent()
+                return True
+        return False
 
     def _loop(self, conn) -> None:
         period = 1.0 / SEND_HZ
